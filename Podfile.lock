@@ -1,0 +1,14 @@
+PODS:
+  - GBCli (1.1)
+
+DEPENDENCIES:
+  - GBCli (from `../GBCli`)
+
+EXTERNAL SOURCES:
+  GBCli:
+    :git: ../GBCli
+
+SPEC CHECKSUMS:
+  GBCli: 3527037ed1a797dbcc7ea32a86287abae0eb614f
+
+COCOAPODS: 0.33.1
