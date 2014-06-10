@@ -37,8 +37,10 @@ func run() {
 		return
 	}
 	
-	let symbolicator = Symbolicator(settings: settings)
-	symbolicator.symbolicate()
+	let symbolicator = Symbolicator()
+	let crashLogs = settings.arguments as Array<String>;
+	let archivesPath = settings.xcodeArchivesFolder;
+	symbolicator.symbolicate(crashLogs, archivesPath: archivesPath)
 }
 
 setup()

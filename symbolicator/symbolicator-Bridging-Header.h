@@ -6,3 +6,4 @@
  */
 
 #import <GBCli/GBCli.h>
+#import "RegExCategories.h"

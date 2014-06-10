@@ -8,13 +8,14 @@ Copyright (c) 2014 Gentle Bytes. All rights reserved.
 import Foundation
 
 class Symbolicator {
-	init(settings: Settings) {
-		self.settings = settings
-	}
-	
-	func symbolicate() {
-		println("Symbolicating \(settings.arguments.count) crash logs...")
-		for filename: AnyObject in settings.arguments {
+	func symbolicate(files: Array<String>, archivesPath: String) {
+		println("Symbolicating \(files.count) crash logs...")
+		
+		let archiveHandler = ArchiveHandler(path: archivesPath)
+		let symbolicator = FileSymbolicator()
+		
+		for filename in files {
+			// Prepare full path to crash log and bail out if it doesn't exist.
 			println("Symbolicating \(filename)...")
 			let path: String = filename.stringByStandardizingPath
 			if !NSFileManager.defaultManager().fileExistsAtPath(path) {
@@ -22,9 +23,15 @@ class Symbolicator {
 				continue
 			}
 			
-			let contents: String = NSString.stringWithContentsOfFile(path)
+			// Load contents of the file into string and bail out if it doesn't work.
+			let optionalContents = String.stringWithContentsOfFile(path, encoding: NSUTF8StringEncoding, error: nil)
+			if (!optionalContents) {
+				println("ERROR: can't read contents of \(path.lastPathComponent)!")
+				continue;
+			}
+			
+			// Symbolicate the crash log.
+			symbolicator.symbolicate(optionalContents!, archiveHandler: archiveHandler)
 		}
 	}
-	
-	let settings: Settings
 }

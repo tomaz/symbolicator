@@ -10,6 +10,9 @@
 		73261503194577F500DC069E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73261502194577F500DC069E /* main.swift */; };
 		7326150E194579F900DC069E /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326150D194579F900DC069E /* Settings.swift */; };
 		7326151019457E5B00DC069E /* Symbolicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7326150F19457E5B00DC069E /* Symbolicator.swift */; };
+		738B72F61947459400451933 /* RegExCategories.m in Sources */ = {isa = PBXBuildFile; fileRef = 738B72F51947459400451933 /* RegExCategories.m */; };
+		738B72F819474C7D00451933 /* FileSymbolicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738B72F719474C7D00451933 /* FileSymbolicator.swift */; };
+		738B72FA194751F700451933 /* ArchiveHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738B72F9194751F700451933 /* ArchiveHandler.swift */; };
 		9907F136D7584532AC171FC6 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 060CC723AC96477D8741508C /* libPods.a */; };
 /* End PBXBuildFile section */
 
@@ -32,6 +35,10 @@
 		732615091945789900DC069E /* symbolicator-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "symbolicator-Bridging-Header.h"; sourceTree = "<group>"; };
 		7326150D194579F900DC069E /* Settings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		7326150F19457E5B00DC069E /* Symbolicator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Symbolicator.swift; sourceTree = "<group>"; };
+		738B72F41947459400451933 /* RegExCategories.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RegExCategories.h; sourceTree = "<group>"; };
+		738B72F51947459400451933 /* RegExCategories.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RegExCategories.m; sourceTree = "<group>"; };
+		738B72F719474C7D00451933 /* FileSymbolicator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileSymbolicator.swift; sourceTree = "<group>"; };
+		738B72F9194751F700451933 /* ArchiveHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchiveHandler.swift; sourceTree = "<group>"; };
 		B6BA76753D3441E88F04772E /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -69,9 +76,12 @@
 			isa = PBXGroup;
 			children = (
 				732615091945789900DC069E /* symbolicator-Bridging-Header.h */,
+				738B72F719474C7D00451933 /* FileSymbolicator.swift */,
+				738B72F9194751F700451933 /* ArchiveHandler.swift */,
 				73261502194577F500DC069E /* main.swift */,
 				7326150F19457E5B00DC069E /* Symbolicator.swift */,
 				7326150A194579C900DC069E /* CmdLine */,
+				738B72F21947456200451933 /* ThirdParty */,
 			);
 			path = symbolicator;
 			sourceTree = "<group>";
@@ -82,6 +92,23 @@
 				7326150D194579F900DC069E /* Settings.swift */,
 			);
 			name = CmdLine;
+			sourceTree = "<group>";
+		};
+		738B72F21947456200451933 /* ThirdParty */ = {
+			isa = PBXGroup;
+			children = (
+				738B72F31947456C00451933 /* ObjCRegex */,
+			);
+			name = ThirdParty;
+			sourceTree = "<group>";
+		};
+		738B72F31947456C00451933 /* ObjCRegex */ = {
+			isa = PBXGroup;
+			children = (
+				738B72F41947459400451933 /* RegExCategories.h */,
+				738B72F51947459400451933 /* RegExCategories.m */,
+			);
+			path = ObjCRegex;
 			sourceTree = "<group>";
 		};
 		E0C192CFDF3E4F1C93DECA82 /* Frameworks */ = {
@@ -184,6 +211,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				7326150E194579F900DC069E /* Settings.swift in Sources */,
+				738B72FA194751F700451933 /* ArchiveHandler.swift in Sources */,
+				738B72F61947459400451933 /* RegExCategories.m in Sources */,
+				738B72F819474C7D00451933 /* FileSymbolicator.swift in Sources */,
 				7326151019457E5B00DC069E /* Symbolicator.swift in Sources */,
 				73261503194577F500DC069E /* main.swift in Sources */,
 			);
