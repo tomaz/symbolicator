@@ -34,11 +34,18 @@ class FileSymbolicator {
 		var matches = RxMatch[]()
 		matches += self.matchSymbolsForSymbolication(contents, identifier: information.name)
 		matches += self.matchSymbolsForSymbolication(contents, identifier: information.identifier)
+		
+		// Prepare and log matched info.
+		let startAddress = optionalStartAddress!
+		let dwarfPath = optionalDwarfPath!
+		let archivePath = self.archivePathFromDwarfPath(dwarfPath)
+		println("Matched archive \(archivePath)")
 		println("Matched \(matches.count) addresses for symbolizing")
+		println("Starting address is \(startAddress)")
 		
 		// Extract array of addresses that need symbolication and symbolize them.
 		let addresses = matches.map { $0.groups[1].value } as String[]
-		let symbols = self.symbolicateAddresses(optionalStartAddress!, dwarfPath: optionalDwarfPath!, addresses: addresses)
+		let symbols = self.symbolicateAddresses(startAddress, dwarfPath: dwarfPath, addresses: addresses)
 		let symbolizedString = self.generateSymbolicatedString(contents, matches: matches, symbols: symbols)
 		return symbolizedString
 	}
@@ -103,7 +110,6 @@ class FileSymbolicator {
 		}
 		
 		let result = optionalMatch!.groups[1].value
-		println("Starting address is \(result)")
 		return result
 	}
 	
@@ -133,5 +139,10 @@ class FileSymbolicator {
 		
 		println("Detected \(identifier) [\(name) \(version) (\(build))]")
 		return (name, identifier, version, build)
+	}
+	
+	/* private */ func archivePathFromDwarfPath(path: String) -> String {
+		let index = path.bridgeToObjectiveC().rangeOfString("/dSYMs/").location
+		return path.substringToIndex(index)
 	}
 }

@@ -9,7 +9,7 @@ import Foundation
 
 class Symbolicator {
 	func symbolicate(files: Array<String>, archivesPath: String) {
-		println("Symbolicating \(files.count) crash logs...")
+		println("Symbolizing \(files.count) crash logs...")
 		
 		let archiveHandler = ArchiveHandler(path: archivesPath)
 		let symbolicator = FileSymbolicator()
@@ -17,7 +17,7 @@ class Symbolicator {
 		for filename in files {
 			// Prepare full path to crash log and bail out if it doesn't exist.
 			println()
-			println("Symbolicating \(filename)...")
+			println("Symbolizing \(filename)...")
 			let path: String = filename.stringByStandardizingPath
 			if !NSFileManager.defaultManager().fileExistsAtPath(path) {
 				println("ERROR: file doesn't exist!")
@@ -39,7 +39,7 @@ class Symbolicator {
 				}
 			}
 			
-			println("Finished!")
+			println("File overwritted with symbolized data")
 		}
 	}
 }

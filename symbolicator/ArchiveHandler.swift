@@ -46,14 +46,12 @@ class ArchiveHandler {
 		// Try to get dwarf path using build number first. If found, use it.
 		let archiveKey = self.dwarfKeyWithIdentifier(identifier, version: version, build: build)
 		if let result = self.dwarfPathsByIdentifiers[archiveKey] {
-			println("Matched archive at \(result)")
 			return result
 		}
 		
 		// Try to use generic "any build" for given version (older versions of Xcode didn't save build number to archive plist). If found, use it.
 		let genericArchiveKey = self.dwarfKeyWithIdentifier(identifier, version: version, build: "")
 		if let result = self.dwarfPathsByIdentifiers[genericArchiveKey] {
-			println("Matched archive at \(result)")
 			return result
 		}
 		
