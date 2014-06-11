@@ -45,7 +45,7 @@ class FileSymbolicator {
 		
 		// Extract array of addresses that need symbolication and symbolize them.
 		let addresses = matches.map { $0.groups[1].value } as String[]
-		let symbols = self.symbolicateAddresses(startAddress, dwarfPath: dwarfPath, addresses: addresses)
+		let symbols = self.symbolicateAddresses(startAddress, architecture: information.architecture, dwarfPath: dwarfPath, addresses: addresses)
 		let symbolizedString = self.generateSymbolicatedString(contents, matches: matches, symbols: symbols)
 		return symbolizedString
 	}
@@ -79,12 +79,13 @@ class FileSymbolicator {
 		return symbolizedContents
 	}
 	
-	/* private */ func symbolicateAddresses(baseAddress: String, dwarfPath: String, addresses: String[]) -> String[] {
+	/* private */ func symbolicateAddresses(baseAddress: String, architecture: String, dwarfPath: String, addresses: String[]) -> String[] {
+		let arch = architecture.lowercaseString.bridgeToObjectiveC().stringByReplacingOccurrencesOfString("-", withString: "_")
 		let stdOutPipe = NSPipe()
 		let stdErrPipe = NSPipe()
 		let task = NSTask()
 		task.launchPath = "/usr/bin/xcrun"
-		task.arguments = ["atos", "-arch", "x86_64", "-o", dwarfPath, "-l", baseAddress] + addresses
+		task.arguments = ["atos", "-arch", arch, "-o", dwarfPath, "-l", baseAddress] + addresses
 		task.standardOutput = stdOutPipe
 		task.standardError = stdErrPipe
 		task.launch()
@@ -113,7 +114,7 @@ class FileSymbolicator {
 		return result
 	}
 	
-	/* private */ func extractProcessInformation(contents: String) -> (name: String, identifier: String, version: String, build: String)? {
+	/* private */ func extractProcessInformation(contents: String) -> (name: String, identifier: String, version: String, build: String, architecture: String)? {
 		let optionalProcessMatch = "^Process:\\s+([^\\[]+) \\[[^\\]]+\\]".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
 		if !optionalProcessMatch {
 			println("ERROR: Process name is missing!")
@@ -132,13 +133,20 @@ class FileSymbolicator {
 			return nil
 		}
 		
+		let optionalArchitectureMatch = "^Code Type:\\s+([^ ]+)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
+		if !optionalArchitectureMatch {
+			println("ERROR: Process architecture value is missing!")
+			return nil
+		}
+
 		let name = optionalProcessMatch!.groups[1].value
 		let identifier = optionalIdentifierMatch!.groups[1].value
 		let version = optionalVersionMatch!.groups[1].value
 		let build = optionalVersionMatch!.groups[2].value
+		let architecture = optionalArchitectureMatch!.groups[1].value
 		
-		println("Detected \(identifier) [\(name) \(version) (\(build))]")
-		return (name, identifier, version, build)
+		println("Detected \(identifier) \(architecture) [\(name) \(version) (\(build))]")
+		return (name, identifier, version, build, architecture)
 	}
 	
 	/* private */ func archivePathFromDwarfPath(path: String) -> String {
