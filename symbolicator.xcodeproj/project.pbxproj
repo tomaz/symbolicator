@@ -76,10 +76,10 @@
 			isa = PBXGroup;
 			children = (
 				732615091945789900DC069E /* symbolicator-Bridging-Header.h */,
-				738B72F719474C7D00451933 /* FileSymbolicator.swift */,
-				738B72F9194751F700451933 /* ArchiveHandler.swift */,
 				73261502194577F500DC069E /* main.swift */,
 				7326150F19457E5B00DC069E /* Symbolicator.swift */,
+				738B72F719474C7D00451933 /* FileSymbolicator.swift */,
+				738B72F9194751F700451933 /* ArchiveHandler.swift */,
 				7326150A194579C900DC069E /* CmdLine */,
 				738B72F21947456200451933 /* ThirdParty */,
 			);
