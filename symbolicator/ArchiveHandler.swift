@@ -14,60 +14,83 @@ class ArchiveHandler {
 	}
 	
 	func dwarfPathWithIdentifier(identifier: String, version: String, build: String) -> String? {
-		let archiveKey = self.dwarfKeyWithIdentifier(identifier, version: version, build: build)
-		
-		// If this archive was already parsed, return the path.
-		let optionalPath = self.dwarfPathsByIdentifiers[archiveKey]
-		if optionalPath { return optionalPath! }
-		
-		// Otherwise scan all archives for the given version.
-		let manager = NSFileManager.defaultManager()
-		let fullBasePath = self.basePath.stringByStandardizingPath
-		manager.enumerateDirectoriesAtPath(fullBasePath) {
-			dateFolder in
-			manager.enumerateDirectoriesAtPath(dateFolder) {
-				buildFolder in
-				
-				// If there's no plist file at the given path, ignore it.
-				let plistPath = buildFolder.stringByAppendingPathComponent("Info.plist")
-				if !manager.fileExistsAtPath(plistPath) { return }
-				
-				// Load plist into dictionary.
-				let plistData = NSData.dataWithContentsOfFile(plistPath, options: NSDataReadingOptions.DataReadingUncached, error: nil)
-				let plistContents: AnyObject = NSPropertyListSerialization.propertyListWithData(plistData, options: 0, format: nil, error: nil)
-				
-				// Read application properties.
-				let applicationProperties: AnyObject = plistContents.objectForKey("ApplicationProperties")
-				let applicationPath = applicationProperties.objectForKey("ApplicationPath") as String
-				let applicationIdentifier = applicationProperties.objectForKey("CFBundleIdentifier") as String
-				let applicationVersion = applicationProperties.objectForKey("CFBundleShortVersionString") as String
-				let applicationBuild = applicationProperties.objectForKey("CFBundleVersion") as String
-				
-				// Prepare path components.
-				let applicationFilename = applicationPath.lastPathComponent
-				let applicationName = applicationFilename.stringByDeletingPathExtension
-				
-				// Add entry to dwarf keys.
-				let dwarfKey = self.dwarfKeyWithIdentifier(applicationIdentifier, version: applicationVersion, build: applicationBuild)
-				let dwarfPath = "\(buildFolder)/dSYMs/\(applicationFilename).dSYM/Contents/Resources/DWARF/\(applicationName)"
-				self.dwarfPathsByIdentifiers[dwarfKey] = dwarfPath
+		// If we don't have any dwarf files scanned, do so now.
+		if self.dwarfPathsByIdentifiers.count == 0 {
+			let manager = NSFileManager.defaultManager()
+			let fullBasePath = self.basePath.stringByStandardizingPath
+			manager.enumerateDirectoriesAtPath(fullBasePath) {
+				dateFolder in
+				manager.enumerateDirectoriesAtPath(dateFolder) {
+					buildFolder in
+					
+					// If there's no plist file at the given path, ignore it.
+					let plistPath = buildFolder.stringByAppendingPathComponent("Info.plist")
+					if !manager.fileExistsAtPath(plistPath) { return }
+					
+					// Load plist into dictionary.
+					let plistData = NSData.dataWithContentsOfFile(plistPath, options: NSDataReadingOptions.DataReadingUncached, error: nil)
+					let plistContents: AnyObject = NSPropertyListSerialization.propertyListWithData(plistData, options: 0, format: nil, error: nil)
+					
+					// Read application properties.
+					let applicationInfo = self.applicationInformationWithInfoPlist(plistContents)
+					let applicationName = applicationInfo.name.stringByDeletingPathExtension
+
+					// Add entry to dwarf keys.
+					let dwarfKey = self.dwarfKeyWithIdentifier(applicationInfo.identifier, version: applicationInfo.version, build: applicationInfo.build)
+					let dwarfPath = "\(buildFolder)/dSYMs/\(applicationInfo.name).dSYM/Contents/Resources/DWARF/\(applicationName)"
+					self.dwarfPathsByIdentifiers[dwarfKey] = dwarfPath
+				}
 			}
 		}
 		
-		if let path = self.dwarfPathsByIdentifiers[archiveKey] {
-			return path
+		// Try to get dwarf path using build number first. If found, use it.
+		let archiveKey = self.dwarfKeyWithIdentifier(identifier, version: version, build: build)
+		if let result = self.dwarfPathsByIdentifiers[archiveKey] {
+			println("Matched archive at \(result)")
+			return result
 		}
 		
+		// Try to use generic "any build" for given version (older versions of Xcode didn't save build number to archive plist). If found, use it.
+		let genericArchiveKey = self.dwarfKeyWithIdentifier(identifier, version: version, build: "")
+		if let result = self.dwarfPathsByIdentifiers[genericArchiveKey] {
+			println("Matched archive at \(result)")
+			return result
+		}
+		
+		// If there's no archive match, return nil
 		return nil
 	}
 	
-	/* private */ func dwarfKeyWithIdentifier(identifier: String, version: String, build: String) -> String {
-		return "\(identifier) \(version) \(build)"
+	/* private */ func applicationInformationWithInfoPlist(plistContents: AnyObject) -> (name: String, identifier: String, version: String, build: String) {
+		var applicationName = ""
+		var applicationIdentifier = ""
+		var applicationVersion = ""
+		var applicationBuild = ""
+		
+		if let applicationProperties: AnyObject = plistContents.objectForKey("ApplicationProperties") {
+			if let path = applicationProperties.objectForKey("ApplicationPath") as? String {
+				applicationName = path.lastPathComponent
+			}
+			if let identifier = applicationProperties.objectForKey("CFBundleIdentifier") as? String {
+				applicationIdentifier = identifier
+			}
+			if let version = applicationProperties.objectForKey("CFBundleShortVersionString") as? String {
+				applicationVersion = version
+			}
+			if let build = applicationProperties.objectForKey("CFBundleVersion") as? String {
+				applicationBuild = build
+			}
+		}
+		
+		return (applicationName, applicationIdentifier, applicationVersion, applicationBuild)
 	}
 	
-	// xcrun atos -arch x86_64
-	// -o "~/Library/Developer/Xcode/Archives/2013-12-18/Startupizer 2.3.1 (1980) 18.12.13 07.49.xcarchive/dSYMs/Startupizer2.app.dSYM/Contents/Resources/DWARF/Startupizer2"
-	// -l
+	/* private */ func dwarfKeyWithIdentifier(identifier: String, version: String, build: String) -> String {
+		if countElements(build) == 0 {
+			return "\(identifier) \(version) ANYBUILD"
+		}
+		return "\(identifier) \(version) \(build)"
+	}
 	
 	/* private */ let basePath: String
 	/* private */ var dwarfPathsByIdentifiers: Dictionary<String, String>
