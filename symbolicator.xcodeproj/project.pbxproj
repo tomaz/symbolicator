@@ -13,6 +13,7 @@
 		738B72F61947459400451933 /* RegExCategories.m in Sources */ = {isa = PBXBuildFile; fileRef = 738B72F51947459400451933 /* RegExCategories.m */; };
 		738B72F819474C7D00451933 /* FileSymbolicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738B72F719474C7D00451933 /* FileSymbolicator.swift */; };
 		738B72FA194751F700451933 /* ArchiveHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738B72F9194751F700451933 /* ArchiveHandler.swift */; };
+		73C00D33194902A000D3C145 /* Options.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73C00D32194902A000D3C145 /* Options.swift */; };
 		9907F136D7584532AC171FC6 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 060CC723AC96477D8741508C /* libPods.a */; };
 /* End PBXBuildFile section */
 
@@ -39,6 +40,7 @@
 		738B72F51947459400451933 /* RegExCategories.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RegExCategories.m; sourceTree = "<group>"; };
 		738B72F719474C7D00451933 /* FileSymbolicator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileSymbolicator.swift; sourceTree = "<group>"; };
 		738B72F9194751F700451933 /* ArchiveHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArchiveHandler.swift; sourceTree = "<group>"; };
+		73C00D32194902A000D3C145 /* Options.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Options.swift; sourceTree = "<group>"; };
 		B6BA76753D3441E88F04772E /* Pods.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Pods.xcconfig; path = Pods/Pods.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -90,6 +92,7 @@
 			isa = PBXGroup;
 			children = (
 				7326150D194579F900DC069E /* Settings.swift */,
+				73C00D32194902A000D3C145 /* Options.swift */,
 			);
 			name = CmdLine;
 			sourceTree = "<group>";
@@ -216,6 +219,7 @@
 				738B72F819474C7D00451933 /* FileSymbolicator.swift in Sources */,
 				7326151019457E5B00DC069E /* Symbolicator.swift in Sources */,
 				73261503194577F500DC069E /* main.swift in Sources */,
+				73C00D33194902A000D3C145 /* Options.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

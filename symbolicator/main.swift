@@ -9,31 +9,33 @@
 import Foundation
 
 let settings = Settings()
-let options = GBOptionsHelper()
+let options = Options()
 let commandLineParser = GBCommandLineParser()
 
 func setup() {
-	options.applicationVersion = { "1.0" }
-	options.applicationBuild = { "99" }
-	
 	commandLineParser.registerOptions(options)
 	commandLineParser.registerSettings(settings)
 }
 
 func run() {
+	options.printVersion()
+	println()
+	
 	if !commandLineParser.parseOptionsUsingDefaultArguments() {
-		println("Failed parsing command line options!")
 		println()
-		println(options.printVersion())
-		println(options.printHelp())
+		options.printHelp()
+		return
+	}
+
+	if settings.printHelp {
+		options.printHelp()
 		return
 	}
 	
 	if commandLineParser.arguments.count == 0 {
 		println("At least one crashlog path is required!")
 		println()
-		println(options.printVersion())
-		println(options.printHelp())
+		options.printHelp()
 		return
 	}
 	

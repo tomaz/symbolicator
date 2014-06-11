@@ -23,6 +23,12 @@ class Settings: GBSettings {
 		get { return self.objectForKey(settingXcodeArchivesKey) as String }
 		set { self.setObject(newValue, forKey: settingXcodeArchivesKey) }
 	}
+	
+	var printHelp: Bool {
+		get { return self.boolForKey(settingsPrintHelpKey) }
+		set { self.setBool(newValue, forKey: settingsPrintHelpKey) }
+	}
 }
 
 let settingXcodeArchivesKey = "archives"
+let settingsPrintHelpKey = "help"
