@@ -8,7 +8,7 @@ Copyright (c) 2014 Gentle Bytes. All rights reserved.
 import Foundation
 
 class Options: GBOptionsHelper {
-	init() {
+	override init() {
 		super.init()
 		
 		self.applicationVersion = { "1.0" }

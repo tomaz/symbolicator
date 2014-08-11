@@ -59,7 +59,7 @@ class ArchiveHandler {
 		return nil
 	}
 	
-	/* private */ func applicationInformationWithInfoPlist(plistContents: AnyObject) -> (name: String, identifier: String, version: String, build: String) {
+	private func applicationInformationWithInfoPlist(plistContents: AnyObject) -> (name: String, identifier: String, version: String, build: String) {
 		var applicationName = ""
 		var applicationIdentifier = ""
 		var applicationVersion = ""
@@ -83,20 +83,20 @@ class ArchiveHandler {
 		return (applicationName, applicationIdentifier, applicationVersion, applicationBuild)
 	}
 	
-	/* private */ func dwarfKeyWithIdentifier(identifier: String, version: String, build: String) -> String {
+	private func dwarfKeyWithIdentifier(identifier: String, version: String, build: String) -> String {
 		if countElements(build) == 0 {
 			return "\(identifier) \(version) ANYBUILD"
 		}
 		return "\(identifier) \(version) \(build)"
 	}
 	
-	/* private */ let basePath: String
-	/* private */ var dwarfPathsByIdentifiers: Dictionary<String, String>
+	private let basePath: String
+	private var dwarfPathsByIdentifiers: Dictionary<String, String>
 }
 
 extension NSFileManager {
 	func enumerateDirectoriesAtPath(path: String, block: (path: String) -> Void) {
-		let subpaths = self.contentsOfDirectoryAtPath(path, error: nil) as String[]
+		let subpaths = self.contentsOfDirectoryAtPath(path, error: nil) as [String]
 		for subpath in subpaths {
 			let fullPath = path.stringByAppendingPathComponent(subpath)
 			if !self.isDirectoryAtPath(fullPath) { continue }
