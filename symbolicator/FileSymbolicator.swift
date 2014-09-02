@@ -104,7 +104,7 @@ class FileSymbolicator {
 	private func matchBaseAddressForSymbolication(contents: String, identifier: String, version: String, build: String) -> String? {
 		let pattern: NSString = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+\\(\(version)\\s*-\\s*\(build)\\)"
 		let optionalMatch = pattern.toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if !optionalMatch {
+		if optionalMatch == nil {
 			println("ERROR: Didn't find starting address for \(identifier)")
 			return nil
 		}
@@ -115,25 +115,25 @@ class FileSymbolicator {
 	
 	private func extractProcessInformation(contents: String) -> (name: String, identifier: String, version: String, build: String, architecture: String)? {
 		let optionalProcessMatch = "^Process:\\s+([^\\[]+) \\[[^\\]]+\\]".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if !optionalProcessMatch {
+		if optionalProcessMatch == nil {
 			println("ERROR: Process name is missing!")
 			return nil
 		}
 		
 		let optionalIdentifierMatch = "^Identifier:\\s+(.+)$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if !optionalIdentifierMatch {
+		if optionalIdentifierMatch == nil {
 			println("ERROR: Process identifier is missing!")
 			return nil
 		}
 		
 		let optionalVersionMatch = "^Version:\\s+([^ ]+) \\(([^)]+)\\)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if !optionalVersionMatch {
+		if optionalVersionMatch == nil {
 			println("ERROR: Process version and build number is missing!")
 			return nil
 		}
 		
 		let optionalArchitectureMatch = "^Code Type:\\s+([^ ]+)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
-		if !optionalArchitectureMatch {
+		if optionalArchitectureMatch == nil {
 			println("ERROR: Process architecture value is missing!")
 			return nil
 		}
