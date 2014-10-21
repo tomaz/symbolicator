@@ -44,7 +44,7 @@ class FileSymbolicator {
 		println("Starting address is \(startAddress)")
 		
 		// Extract array of addresses that need symbolication and symbolize them.
-		let addresses = matches.map { $0.groups[1].value } as [String]
+		let addresses = matches.map { let group = $0.groups[1] as RxMatchGroup; return group.value } as [String]
 		let symbols = self.symbolicateAddresses(startAddress, architecture: information.architecture, dwarfPath: dwarfPath, addresses: addresses)
 		let symbolizedString = self.generateSymbolicatedString(contents, matches: matches, symbols: symbols)
 		return symbolizedString
@@ -138,11 +138,17 @@ class FileSymbolicator {
 			return nil
 		}
 
-		let name = optionalProcessMatch!.groups[1].value as String
-		let identifier = optionalIdentifierMatch!.groups[1].value as String
-		let version = optionalVersionMatch!.groups[1].value as String
-		let build = optionalVersionMatch!.groups[2].value as String
-		let architecture = optionalArchitectureMatch!.groups[1].value as String
+		let processGroup1 = optionalProcessMatch!.groups[1] as RxMatchGroup
+		let identifierGroup1 = optionalIdentifierMatch!.groups[1] as RxMatchGroup
+		let versionGroup1 = optionalVersionMatch!.groups[1] as RxMatchGroup
+		let versionGroup2 = optionalVersionMatch!.groups[2] as RxMatchGroup
+		let architectureGroup1 = optionalArchitectureMatch!.groups[1] as RxMatchGroup
+		
+		let name = processGroup1.value as String
+		let identifier = identifierGroup1.value as String
+		let version = versionGroup1.value as String
+		let build = versionGroup2.value as String
+		let architecture = architectureGroup1.value as String
 		
 		println("Detected \(identifier) \(architecture) [\(name) \(version) (\(build))]")
 		return (name, identifier, version, build, architecture)
