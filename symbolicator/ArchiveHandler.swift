@@ -28,8 +28,8 @@ class ArchiveHandler {
 					if !manager.fileExistsAtPath(plistPath) { return }
 					
 					// Load plist into dictionary.
-					let plistData = NSData.dataWithContentsOfFile(plistPath, options: NSDataReadingOptions.DataReadingUncached, error: nil)
-					let plistContents: AnyObject = NSPropertyListSerialization.propertyListWithData(plistData, options: 0, format: nil, error: nil)!
+					let plistData = NSData(contentsOfFile: plistPath, options: NSDataReadingOptions.DataReadingUncached, error: nil)
+					let plistContents: AnyObject = NSPropertyListSerialization.propertyListWithData(plistData!, options: 0, format: nil, error: nil)!
 					
 					// Read application properties.
 					let applicationInfo = self.applicationInformationWithInfoPlist(plistContents)

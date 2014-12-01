@@ -91,8 +91,10 @@ class FileSymbolicator {
 		task.waitUntilExit()
 		
 		let translatedData = stdOutPipe.fileHandleForReading.readDataToEndOfFile()
-		let translatedString = NSString(data: translatedData, encoding: NSASCIIStringEncoding)
-		return translatedString.componentsSeparatedByString("\n") as [String]
+		if let translatedString = NSString(data: translatedData, encoding: NSASCIIStringEncoding) {
+			return translatedString.componentsSeparatedByString("\n") as [String]
+		}
+		return []
 	}
 	
 	private func matchSymbolsForSymbolication(contents: NSString, identifier: String) -> [RxMatch] {

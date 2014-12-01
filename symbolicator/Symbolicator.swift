@@ -25,7 +25,7 @@ class Symbolicator {
 			}
 			
 			// Load contents of the file into string and bail out if it doesn't work.
-			let optionalContents = String.stringWithContentsOfFile(path, encoding: NSUTF8StringEncoding, error: nil)
+			let optionalContents = String(contentsOfFile: path, encoding: NSUTF8StringEncoding, error: nil)
 			if optionalContents == nil {
 				println("ERROR: can't read contents of \(path.lastPathComponent)!")
 				continue
