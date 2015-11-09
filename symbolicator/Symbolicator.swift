@@ -9,37 +9,39 @@ import Foundation
 
 class Symbolicator {
 	func symbolicate(files: Array<String>, archivesPath: String) {
-		println("Symbolizing \(files.count) crash logs...")
+		print("Symbolizing \(files.count) crash logs...")
 		
 		let archiveHandler = ArchiveHandler(path: archivesPath)
 		let symbolicator = FileSymbolicator()
 		
 		for filename in files {
 			// Prepare full path to crash log and bail out if it doesn't exist.
-			println()
-			println("Symbolizing \(filename)...")
-			let path: String = filename.stringByStandardizingPath
+			print("")
+			print("Symbolizing \(filename)...")
+			let path: String = (filename as NSString).stringByStandardizingPath
 			if !NSFileManager.defaultManager().fileExistsAtPath(path) {
-				println("ERROR: file doesn't exist!")
+				print("ERROR: file doesn't exist!")
 				continue
 			}
 			
 			// Load contents of the file into string and bail out if it doesn't work.
-			let optionalContents = String(contentsOfFile: path, encoding: NSUTF8StringEncoding, error: nil)
-			if optionalContents == nil {
-				println("ERROR: can't read contents of \(path.lastPathComponent)!")
+			do {
+				let optionalContents = try String(contentsOfFile:path, encoding: NSUTF8StringEncoding)
+				
+				// Symbolicate the crash log.
+				if let symbolized = symbolicator.symbolicate(optionalContents, archiveHandler: archiveHandler) {
+					do {
+						try symbolized.writeToFile(path, atomically: true, encoding: NSUTF8StringEncoding)
+					} catch {
+						print("ERROR: failed saving symbolized contents: \(error)")
+					}
+				}
+				
+				print("File overwritted with symbolized data")
+			} catch {
+				print("ERROR: Failed reading contents of \((path as NSString).lastPathComponent): \(error)")
 				continue
 			}
-			
-			// Symbolicate the crash log.
-			if let symbolized = symbolicator.symbolicate(optionalContents!, archiveHandler: archiveHandler) {
-				if !symbolized.writeToFile(path, atomically: true, encoding: NSUTF8StringEncoding, error: nil) {
-					println("ERROR: failed saving symbolized contents!")
-					continue
-				}
-			}
-			
-			println("File overwritted with symbolized data")
 		}
 	}
 }

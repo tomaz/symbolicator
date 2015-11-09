@@ -26,7 +26,7 @@ class FileSymbolicator {
 		// Get the corresponding dwarf file.
 		let optionalDwarfPath = archiveHandler.dwarfPathWithIdentifier(information.identifier, version: information.version, build: information.build)
 		if optionalDwarfPath == nil {
-			println("ERROR: No archive found!")
+			print("ERROR: No archive found!")
 			return nil
 		}
 		
@@ -39,12 +39,12 @@ class FileSymbolicator {
 		let startAddress = optionalStartAddress!
 		let dwarfPath = optionalDwarfPath!
 		let archivePath = self.archivePathFromDwarfPath(dwarfPath)
-		println("Matched archive \(archivePath)")
-		println("Matched \(matches.count) addresses for symbolizing")
-		println("Starting address is \(startAddress)")
+		print("Matched archive \(archivePath)")
+		print("Matched \(matches.count) addresses for symbolizing")
+		print("Starting address is \(startAddress)")
 		
 		// Extract array of addresses that need symbolication and symbolize them.
-		let addresses = matches.map { let group = $0.groups[1] as RxMatchGroup; return group.value } as [String]
+		let addresses = matches.map { let group = $0.groups[1] as! RxMatchGroup; return group.value } as [String]
 		let symbols = self.symbolicateAddresses(startAddress, architecture: information.architecture, dwarfPath: dwarfPath, addresses: addresses)
 		let symbolizedString = self.generateSymbolicatedString(contents, matches: matches, symbols: symbols)
 		return symbolizedString
@@ -55,7 +55,7 @@ class FileSymbolicator {
 		var symbolizedContents = String()
 		
 		// Iterate over all parts that need symbolication.
-		for (index, match) in enumerate(matches) {
+		for (index, match) in matches.enumerate() {
 			let symbol = symbols[index]
 			let replaceRange = match.groups[2].range!
 			
@@ -91,60 +91,58 @@ class FileSymbolicator {
 		task.waitUntilExit()
 		
 		let translatedData = stdOutPipe.fileHandleForReading.readDataToEndOfFile()
-		if let translatedString = NSString(data: translatedData, encoding: NSASCIIStringEncoding) {
-			return translatedString.componentsSeparatedByString("\n") as [String]
-		}
-		return []
+		let translatedString = NSString(data: translatedData, encoding: NSASCIIStringEncoding)!
+		return translatedString.componentsSeparatedByString("\n") as [String]
 	}
 	
 	private func matchSymbolsForSymbolication(contents: NSString, identifier: String) -> [RxMatch] {
 		let pattern: NSString = "^[0-9]+\\s+\(identifier)\\s+(0x[0-9a-fA-F]+)\\s+(.+)$"
 		let regex = pattern.toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)
-		return contents.matchesWithDetails(regex) as [RxMatch]
+		return contents.matchesWithDetails(regex) as! [RxMatch]
 	}
 	
 	private func matchBaseAddressForSymbolication(contents: String, identifier: String, version: String, build: String) -> String? {
 		let pattern: NSString = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+\\(\(version)\\s*-\\s*\(build)\\)"
 		let optionalMatch = pattern.toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if optionalMatch == nil {
-			println("ERROR: Didn't find starting address for \(identifier)")
+		if (optionalMatch == nil) {
+			print("ERROR: Didn't find starting address for \(identifier)")
 			return nil
 		}
 		
-		let group = optionalMatch!.groups[1] as RxMatchGroup
+		let group = optionalMatch!.groups[1] as! RxMatchGroup
 		return group.value
 	}
 	
 	private func extractProcessInformation(contents: String) -> (name: String, identifier: String, version: String, build: String, architecture: String)? {
 		let optionalProcessMatch = "^Process:\\s+([^\\[]+) \\[[^\\]]+\\]".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if optionalProcessMatch == nil {
-			println("ERROR: Process name is missing!")
+		if (optionalProcessMatch == nil) {
+			print("ERROR: Process name is missing!")
 			return nil
 		}
 		
 		let optionalIdentifierMatch = "^Identifier:\\s+(.+)$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if optionalIdentifierMatch == nil {
-			println("ERROR: Process identifier is missing!")
+		if (optionalIdentifierMatch == nil) {
+			print("ERROR: Process identifier is missing!")
 			return nil
 		}
 		
 		let optionalVersionMatch = "^Version:\\s+([^ ]+) \\(([^)]+)\\)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if optionalVersionMatch == nil {
-			println("ERROR: Process version and build number is missing!")
+		if (optionalVersionMatch == nil) {
+			print("ERROR: Process version and build number is missing!")
 			return nil
 		}
 		
 		let optionalArchitectureMatch = "^Code Type:\\s+([^ ]+)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
-		if optionalArchitectureMatch == nil {
-			println("ERROR: Process architecture value is missing!")
+		if (optionalArchitectureMatch == nil) {
+			print("ERROR: Process architecture value is missing!")
 			return nil
 		}
 
-		let processGroup1 = optionalProcessMatch!.groups[1] as RxMatchGroup
-		let identifierGroup1 = optionalIdentifierMatch!.groups[1] as RxMatchGroup
-		let versionGroup1 = optionalVersionMatch!.groups[1] as RxMatchGroup
-		let versionGroup2 = optionalVersionMatch!.groups[2] as RxMatchGroup
-		let architectureGroup1 = optionalArchitectureMatch!.groups[1] as RxMatchGroup
+		let processGroup1 = optionalProcessMatch!.groups[1] as! RxMatchGroup
+		let identifierGroup1 = optionalIdentifierMatch!.groups[1] as! RxMatchGroup
+		let versionGroup1 = optionalVersionMatch!.groups[1] as! RxMatchGroup
+		let versionGroup2 = optionalVersionMatch!.groups[2] as! RxMatchGroup
+		let architectureGroup1 = optionalArchitectureMatch!.groups[1] as! RxMatchGroup
 		
 		let name = processGroup1.value as String
 		let identifier = identifierGroup1.value as String
@@ -152,7 +150,7 @@ class FileSymbolicator {
 		let build = versionGroup2.value as String
 		let architecture = architectureGroup1.value as String
 		
-		println("Detected \(identifier) \(architecture) [\(name) \(version) (\(build))]")
+		print("Detected \(identifier) \(architecture) [\(name) \(version) (\(build))]")
 		return (name, identifier, version, build, architecture)
 	}
 	

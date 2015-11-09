@@ -17,23 +17,23 @@ class ArchiveHandler {
 		// If we don't have any dwarf files scanned, do so now.
 		if self.dwarfPathsByIdentifiers.count == 0 {
 			let manager = NSFileManager.defaultManager()
-			let fullBasePath = self.basePath.stringByStandardizingPath
+			let fullBasePath = (self.basePath as NSString).stringByStandardizingPath
 			manager.enumerateDirectoriesAtPath(fullBasePath) {
 				dateFolder in
 				manager.enumerateDirectoriesAtPath(dateFolder) {
 					buildFolder in
 					
 					// If there's no plist file at the given path, ignore it.
-					let plistPath = buildFolder.stringByAppendingPathComponent("Info.plist")
+					let plistPath = (buildFolder as NSString).stringByAppendingPathComponent("Info.plist")
 					if !manager.fileExistsAtPath(plistPath) { return }
 					
 					// Load plist into dictionary.
-					let plistData = NSData(contentsOfFile: plistPath, options: NSDataReadingOptions.DataReadingUncached, error: nil)
-					let plistContents: AnyObject = NSPropertyListSerialization.propertyListWithData(plistData!, options: 0, format: nil, error: nil)!
+					let plistData = try! NSData(contentsOfFile: plistPath, options: .DataReadingUncached)
+					let plistContents: AnyObject = try! NSPropertyListSerialization.propertyListWithData(plistData, options: NSPropertyListReadOptions(rawValue: 0), format: nil)
 					
 					// Read application properties.
 					let applicationInfo = self.applicationInformationWithInfoPlist(plistContents)
-					let applicationName = applicationInfo.name.stringByDeletingPathExtension
+					let applicationName = (applicationInfo.name as NSString).stringByDeletingPathExtension
 
 					// Add entry to dwarf keys.
 					let dwarfKey = self.dwarfKeyWithIdentifier(applicationInfo.identifier, version: applicationInfo.version, build: applicationInfo.build)
@@ -67,7 +67,7 @@ class ArchiveHandler {
 		
 		if let applicationProperties: AnyObject = plistContents.objectForKey("ApplicationProperties") {
 			if let path = applicationProperties.objectForKey("ApplicationPath") as? String {
-				applicationName = path.lastPathComponent
+				applicationName = (path as NSString).lastPathComponent
 			}
 			if let identifier = applicationProperties.objectForKey("CFBundleIdentifier") as? String {
 				applicationIdentifier = identifier
@@ -84,7 +84,7 @@ class ArchiveHandler {
 	}
 	
 	private func dwarfKeyWithIdentifier(identifier: String, version: String, build: String) -> String {
-		if countElements(build) == 0 {
+		if build.characters.count == 0 {
 			return "\(identifier) \(version) ANYBUILD"
 		}
 		return "\(identifier) \(version) \(build)"
@@ -96,19 +96,18 @@ class ArchiveHandler {
 
 extension NSFileManager {
 	func enumerateDirectoriesAtPath(path: String, block: (path: String) -> Void) {
-		let subpaths = self.contentsOfDirectoryAtPath(path, error: nil) as [String]
+		let subpaths = try! self.contentsOfDirectoryAtPath(path) as [String]
 		for subpath in subpaths {
-			let fullPath = path.stringByAppendingPathComponent(subpath)
+			let fullPath = (path as NSString).stringByAppendingPathComponent(subpath)
 			if !self.isDirectoryAtPath(fullPath) { continue }
 			block(path: fullPath)
 		}
 	}
 	
 	func isDirectoryAtPath(path: NSString) -> Bool {
-		if let attributes = self.attributesOfItemAtPath(path, error: nil) as NSDictionary? {
-			if attributes[NSFileType] as? NSObject == NSFileTypeDirectory {
-				return true
-			}
+		let attributes = try! self.attributesOfItemAtPath(path as String)
+		if attributes[NSFileType] as? NSObject == NSFileTypeDirectory {
+			return true
 		}
 		return false
 	}

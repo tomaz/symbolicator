@@ -20,7 +20,7 @@ class Settings: GBSettings {
 	}
 	
 	var xcodeArchivesFolder: String {
-		get { return self.objectForKey(settingXcodeArchivesKey) as String }
+		get { return self.objectForKey(settingXcodeArchivesKey) as! String }
 		set { self.setObject(newValue, forKey: settingXcodeArchivesKey) }
 	}
 	

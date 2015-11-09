@@ -19,10 +19,10 @@ func setup() {
 
 func run() {
 	options.printVersion()
-	println()
+	print("")
 	
 	if !commandLineParser.parseOptionsUsingDefaultArguments() {
-		println()
+		print("")
 		options.printHelp()
 		return
 	}
@@ -33,14 +33,14 @@ func run() {
 	}
 	
 	if commandLineParser.arguments.count == 0 {
-		println("At least one crashlog path is required!")
-		println()
+		print("At least one crashlog path is required!")
+		print("")
 		options.printHelp()
 		return
 	}
 	
 	let symbolicator = Symbolicator()
-	let crashLogs = settings.arguments as Array<String>;
+	let crashLogs = settings.arguments as! Array<String>;
 	let archivesPath = settings.xcodeArchivesFolder;
 	symbolicator.symbolicate(crashLogs, archivesPath: archivesPath)
 }
