@@ -13,16 +13,14 @@ class ArchiveHandler {
 		self.basePath = path
 	}
 	
+	/// Returns map where keys are names of binaries with corresponding full path to DWARF file.
 	func dwarfPathWithIdentifier(identifier: String, version: String, build: String) -> String? {
 		// If we don't have any dwarf files scanned, do so now.
 		if self.dwarfPathsByIdentifiers.count == 0 {
 			let manager = NSFileManager.defaultManager()
 			let fullBasePath = (self.basePath as NSString).stringByStandardizingPath
-			manager.enumerateDirectoriesAtPath(fullBasePath) {
-				dateFolder in
-				manager.enumerateDirectoriesAtPath(dateFolder) {
-					buildFolder in
-					
+			manager.enumerateDirectoriesAtPath(fullBasePath) { dateFolder in
+				manager.enumerateDirectoriesAtPath(dateFolder) { buildFolder in
 					// If there's no plist file at the given path, ignore it.
 					let plistPath = (buildFolder as NSString).stringByAppendingPathComponent("Info.plist")
 					if !manager.fileExistsAtPath(plistPath) { return }
@@ -33,12 +31,24 @@ class ArchiveHandler {
 					
 					// Read application properties.
 					let applicationInfo = self.applicationInformationWithInfoPlist(plistContents)
-					let applicationName = (applicationInfo.name as NSString).stringByDeletingPathExtension
-
-					// Add entry to dwarf keys.
-					let dwarfKey = self.dwarfKeyWithIdentifier(applicationInfo.identifier, version: applicationInfo.version, build: applicationInfo.build)
-					let dwarfPath = "\(buildFolder)/dSYMs/\(applicationInfo.name).dSYM/Contents/Resources/DWARF/\(applicationName)"
-					self.dwarfPathsByIdentifiers[dwarfKey] = dwarfPath
+					
+					// Scan for all subfolders of dSYMs folder.
+					manager.enumerateDirectoriesAtPath("\(buildFolder)/dSYMs") { subpath in
+						// Delete .app.dSYM or .framework.dSYM and prepare path to contained DWARF file.
+						let binaryNameWithExtension = ((subpath as NSString).lastPathComponent as NSString).stringByDeletingPathExtension
+						let binaryName = (binaryNameWithExtension as NSString).stringByDeletingPathExtension
+						let dwarfPath = "\(subpath)/Contents/Resources/DWARF/\(binaryName)"
+						
+						// Add the key to DWARF file for this binary.
+						let dwarfKey = self.dwarfKeyWithIdentifier(binaryName, version: applicationInfo.version, build: applicationInfo.build)
+						self.dwarfPathsByIdentifiers[dwarfKey] = dwarfPath
+						
+						// If this is the main application binary, also create the key with bundle identifier.
+						if binaryNameWithExtension == applicationInfo.name {
+							let identifierKey = self.dwarfKeyWithIdentifier(applicationInfo.identifier, version: applicationInfo.version, build: applicationInfo.build)
+							self.dwarfPathsByIdentifiers[identifierKey] = dwarfPath
+						}
+					}
 				}
 			}
 		}

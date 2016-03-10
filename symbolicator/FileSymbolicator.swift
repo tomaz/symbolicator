@@ -7,75 +7,116 @@ Copyright (c) 2014 Gentle Bytes. All rights reserved.
 
 import Foundation
 
-class FileSymbolicator {
-	func symbolicate(contents: String, archiveHandler: ArchiveHandler) -> String? {
-		let optionalInformation = self.extractProcessInformation(contents)
-		if optionalInformation == nil {
-			return nil
-		}
-		
-		// Unwrap information tuple from optional value.
-		let information = optionalInformation!
-		
-		// Get starting address.
-		let optionalStartAddress = self.matchBaseAddressForSymbolication(contents, identifier: information.identifier, version: information.version, build: information.build)
-		if optionalStartAddress == nil {
-			return nil
-		}
+typealias CrashlogInformation = (name: String, identifier: String, version: String, build: String, architecture: String)
 
-		// Get the corresponding dwarf file.
-		let optionalDwarfPath = archiveHandler.dwarfPathWithIdentifier(information.identifier, version: information.version, build: information.build)
-		if optionalDwarfPath == nil {
-			print("ERROR: No archive found!")
+class FileSymbolicator {
+	
+	func symbolicate(contents: String, archiveHandler: ArchiveHandler) -> String? {
+		// Extract all information about the process that crashed. Exit if not possible.
+		guard let information = extractProcessInformation(contents) else {
 			return nil
 		}
 		
-		// Find all matches in the crash log, using both, application name and identifier. Group 1 contains address, group 2 text to be replaced with symbolized location.
-		var matches = [RxMatch]()
-		matches += self.matchSymbolsForSymbolication(contents, identifier: information.name)
-		matches += self.matchSymbolsForSymbolication(contents, identifier: information.identifier)
+		// Store parameters for later use.
+		self.archiveHandler = archiveHandler
 		
-		// Prepare and log matched info.
-		let startAddress = optionalStartAddress!
-		let dwarfPath = optionalDwarfPath!
-		let archivePath = self.archivePathFromDwarfPath(dwarfPath)
-		print("Matched archive \(archivePath)")
-		print("Matched \(matches.count) addresses for symbolizing")
-		print("Starting address is \(startAddress)")
+		// Prepare array of all lines needed for symbolication.
+		let matches = linesToSymbolicate(contents)
+		print("Found \(matches.count) lines that need symbolication")
 		
-		// Extract array of addresses that need symbolication and symbolize them.
-		let addresses = matches.map { let group = $0.groups[1] as! RxMatchGroup; return group.value } as [String]
-		let symbols = self.symbolicateAddresses(startAddress, architecture: information.architecture, dwarfPath: dwarfPath, addresses: addresses)
-		let symbolizedString = self.generateSymbolicatedString(contents, matches: matches, symbols: symbols)
-		return symbolizedString
+		// Symbolicate all matches.
+		return symbolicateString(contents, information: information, matches: matches)
 	}
 	
-	private func generateSymbolicatedString(contents: NSString, matches: [RxMatch], symbols: [String]) -> String {
-		var previousIndex = 0
-		var symbolizedContents = String()
+	private func linesToSymbolicate(contents: NSString) -> [RxMatch] {
+		let pattern = "^[0-9]+?\\s+?(.+?)\\s+?(0x[0-9a-fA-F]+?)\\s+?(.+?)$"
+		let regex = pattern.toRxWithOptions(.AnchorsMatchLines)
 		
-		// Iterate over all parts that need symbolication.
-		for (index, match) in matches.enumerate() {
-			let symbol = symbols[index]
-			let replaceRange = match.groups[2].range!
+		// Find all matches.
+		let matches = contents.matchesWithDetails(regex) as! [RxMatch]
+		
+		// Filter just the ones that have a hex number instead of symbol.
+		return matches.filter { match in
+			guard let symbolOrAddress = (match.groups[3] as! RxMatchGroup).value else {
+				return false
+			}
+			return symbolOrAddress.hasPrefix("0x")
+		}
+	}
+	
+	private func symbolicateString(contents: String, information: CrashlogInformation, matches: [RxMatch]) -> String {
+		// Symbolicate all matches. Each entry corresponds to the same match in given array.
+		let whitespace = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+		var result = contents
+		for match in matches {
+			// Prepare binary and base address.
+			let binary = (match.groups[1] as! RxMatchGroup).value!.stringByTrimmingCharactersInSet(whitespace)
+			guard let baseAddress = baseAddressForSymbolication(contents, identifier: binary) else {
+				continue
+			}
 			
-			// Get the substring between previous match and current one.
-			let skippedRange = NSRange(location: previousIndex, length: replaceRange.location - previousIndex)
-			let skippedContents = contents.substringWithRange(skippedRange)
+			// Prepare dwarf path for this binary.
+			guard let dwarfPath = archiveHandler.dwarfPathWithIdentifier(binary, version: information.version, build: information.build) else {
+				print("\(binary): missing DWARF file!")
+				continue
+			}
 			
-			// Append skipped substring and symbol.
-			symbolizedContents += skippedContents
-			symbolizedContents += symbol
+			// Symbolicate addresses.
+			let address = (match.groups[2] as! RxMatchGroup).value!
+			guard let symbolizedAddress = symbolicateAddresses(baseAddress, architecture: information.architecture, dwarfPath: dwarfPath, addresses: [address]).first else {
+				print("\(binary) \(address): no symbol found!")
+				continue
+			}
+
+			// If no symbol is available, ignore.
+			let originalString = match.value!
+			if (symbolizedAddress.characters.count == 0) {
+				print("\(binary) \(address): no symbol found!")
+				continue
+			}
 			
-			previousIndex = replaceRange.location + replaceRange.length
+			// Replace all occurrences within the file.
+			let locationInOriginalString = (match.groups[3] as! RxMatchGroup).range.location - match.range.location
+			let replacementPrefix = originalString.substringToIndex(originalString.startIndex.advancedBy(locationInOriginalString))
+			let replacementString = "\(replacementPrefix)\(symbolizedAddress)"
+			result = result.stringByReplacingOccurrencesOfString(originalString, withString: replacementString)
+			print("\(binary) \(address): \(symbolizedAddress)")
 		}
 		
-		// Symbolicate remaining string.
-		if previousIndex < contents.length {
-			symbolizedContents += contents.substringFromIndex(previousIndex)
+		return result
+	}
+	
+	private func baseAddresses(contents: String, matches: [RxMatch]) -> [String: (String, [RxMatch])] {
+		let ignoredChars = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+		
+		var result = [String: (String, [RxMatch])]()
+		
+		// Prepare an array of base addresses per binary.
+		for match in matches {
+			// Prepare binary and address information.
+			let binary = (match.groups[1] as! RxMatchGroup).value.stringByTrimmingCharactersInSet(ignoredChars)
+			if binary.characters.count == 0 {
+				continue
+			}
+			
+			// If we already matched this pair, reuse it.
+			if var existingEntry = result[binary] {
+				var matches = existingEntry.1
+				matches.append(match)
+				existingEntry.1 = matches
+				continue
+			}
+			
+			// Otherwise gather it from crash log. Ignore if no match is found.
+			guard let baseAddress = baseAddressForSymbolication(contents, identifier: binary) else {
+				continue
+			}
+			
+			// Add address to previous addresses so we don't have to repeat.
+			result[binary] = (baseAddress, [match])
 		}
 		
-		return symbolizedContents
+		return result
 	}
 	
 	private func symbolicateAddresses(baseAddress: String, architecture: String, dwarfPath: String, addresses: [String]) -> [String] {
@@ -95,25 +136,18 @@ class FileSymbolicator {
 		return translatedString.componentsSeparatedByString("\n") as [String]
 	}
 	
-	private func matchSymbolsForSymbolication(contents: NSString, identifier: String) -> [RxMatch] {
-		let pattern: NSString = "^[0-9]+\\s+\(identifier)\\s+(0x[0-9a-fA-F]+)\\s+(.+)$"
-		let regex = pattern.toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)
-		return contents.matchesWithDetails(regex) as! [RxMatch]
-	}
-	
-	private func matchBaseAddressForSymbolication(contents: String, identifier: String, version: String, build: String) -> String? {
-		let pattern: NSString = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+\\(\(version)\\s*-\\s*\(build)\\)"
-		let optionalMatch = pattern.toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
-		if (optionalMatch == nil) {
-			print("ERROR: Didn't find starting address for \(identifier)")
-			return nil
+	private func baseAddressForSymbolication(contents: String, identifier: String) -> String? {
+		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+"
+		
+		if let regex = pattern.toRxWithOptions(.AnchorsMatchLines), let match = regex.firstMatchWithDetails(contents) {
+			return (match.groups[1] as! RxMatchGroup).value
 		}
 		
-		let group = optionalMatch!.groups[1] as! RxMatchGroup
-		return group.value
+		print("WARNING: Didn't find starting address for \(identifier)")
+		return nil
 	}
 	
-	private func extractProcessInformation(contents: String) -> (name: String, identifier: String, version: String, build: String, architecture: String)? {
+	private func extractProcessInformation(contents: String) -> CrashlogInformation? {
 		let optionalProcessMatch = "^Process:\\s+([^\\[]+) \\[[^\\]]+\\]".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
 		if (optionalProcessMatch == nil) {
 			print("ERROR: Process name is missing!")
@@ -126,13 +160,13 @@ class FileSymbolicator {
 			return nil
 		}
 		
-		let optionalVersionMatch = "^Version:\\s+([^ ]+) \\(([^)]+)\\)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
+		let optionalVersionMatch = "^Version:\\s+([^ ]+) \\(([^)]+)\\)$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
 		if (optionalVersionMatch == nil) {
 			print("ERROR: Process version and build number is missing!")
 			return nil
 		}
 		
-		let optionalArchitectureMatch = "^Code Type:\\s+([^ ]+)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
+		let optionalArchitectureMatch = "^Code Type:\\s+([^ ]+).*$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
 		if (optionalArchitectureMatch == nil) {
 			print("ERROR: Process architecture value is missing!")
 			return nil
@@ -154,8 +188,5 @@ class FileSymbolicator {
 		return (name, identifier, version, build, architecture)
 	}
 	
-	private func archivePathFromDwarfPath(path: NSString) -> NSString {
-		let index = path.rangeOfString("/dSYMs/").location
-		return path.substringToIndex(index)
-	}
+	private var archiveHandler: ArchiveHandler!
 }
