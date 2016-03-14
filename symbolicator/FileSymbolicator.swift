@@ -49,6 +49,11 @@ class FileSymbolicator {
 		let whitespace = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 		var result = contents
 		for match in matches {
+			// Add delimiter above each symbolication when verbose mode is on.
+			if settings.printVerbose {
+				print("")
+			}
+			
 			// Prepare binary and base address.
 			let binary = (match.groups[1] as! RxMatchGroup).value!.stringByTrimmingCharactersInSet(whitespace)
 			guard let baseAddress = baseAddressForSymbolication(contents, identifier: binary) else {
@@ -57,21 +62,21 @@ class FileSymbolicator {
 			
 			// Prepare dwarf path for this binary.
 			guard let dwarfPath = archiveHandler.dwarfPathWithIdentifier(binary, version: information.version, build: information.build) else {
-				print("\(binary): missing DWARF file!")
+				print("> \(binary): missing DWARF file!")
 				continue
 			}
 			
 			// Symbolicate addresses.
 			let address = (match.groups[2] as! RxMatchGroup).value!
 			guard let symbolizedAddress = symbolicateAddresses(baseAddress, architecture: information.architecture, dwarfPath: dwarfPath, addresses: [address]).first else {
-				print("\(binary) \(address): no symbol found!")
+				print("> \(binary) \(address): no symbol found!")
 				continue
 			}
 
 			// If no symbol is available, ignore.
 			let originalString = match.value!
 			if (symbolizedAddress.characters.count == 0) {
-				print("\(binary) \(address): no symbol found!")
+				print("> \(binary) \(address): no symbol found!")
 				continue
 			}
 			
@@ -80,7 +85,7 @@ class FileSymbolicator {
 			let replacementPrefix = originalString.substringToIndex(originalString.startIndex.advancedBy(locationInOriginalString))
 			let replacementString = "\(replacementPrefix)\(symbolizedAddress)"
 			result = result.stringByReplacingOccurrencesOfString(originalString, withString: replacementString)
-			print("\(binary) \(address): \(symbolizedAddress)")
+			print("> \(binary) \(address): \(symbolizedAddress)")
 		}
 		
 		return result
@@ -133,6 +138,26 @@ class FileSymbolicator {
 		
 		let translatedData = stdOutPipe.fileHandleForReading.readDataToEndOfFile()
 		let translatedString = NSString(data: translatedData, encoding: NSASCIIStringEncoding)!
+		
+		if settings.printVerbose {
+			// Print command line for simpler replication in
+			let whitespace = NSCharacterSet.whitespaceCharacterSet()
+			let arguments = task.arguments! as [String]
+			let cmdline = arguments.reduce("") {
+				if let _ = $1.rangeOfCharacterFromSet(whitespace) {
+					return "\($0) \"\($1)\""
+				}
+				return "\($0) \($1)"
+			}
+			print("\(task.launchPath!) \(cmdline)");
+		}
+		
+		// If there's some error, print it.
+		let errorData = stdErrPipe.fileHandleForReading.readDataToEndOfFile()
+		if let errorString = NSString(data: errorData, encoding: NSASCIIStringEncoding) where errorString.length > 0 {
+			print("\(errorString)")
+		}
+		
 		return translatedString.componentsSeparatedByString("\n") as [String]
 	}
 	

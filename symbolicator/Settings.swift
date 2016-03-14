@@ -20,15 +20,27 @@ class Settings: GBSettings {
 	}
 	
 	var xcodeArchivesFolder: String {
-		get { return self.objectForKey(settingXcodeArchivesKey) as! String }
-		set { self.setObject(newValue, forKey: settingXcodeArchivesKey) }
+		get { return objectForKey(settingXcodeArchivesKey) as! String }
+		set { setObject(newValue, forKey: settingXcodeArchivesKey) }
+	}
+	
+	var dryRun: Bool {
+		get { return boolForKey(settingsDryRunKey) }
+		set { setBool(newValue, forKey: settingsDryRunKey) }
+	}
+	
+	var printVerbose: Bool {
+		get { return boolForKey(settingsPrintVerboseKey) }
+		set { setBool(newValue, forKey: settingsPrintVerboseKey) }
 	}
 	
 	var printHelp: Bool {
-		get { return self.boolForKey(settingsPrintHelpKey) }
-		set { self.setBool(newValue, forKey: settingsPrintHelpKey) }
+		get { return boolForKey(settingsPrintHelpKey) }
+		set { setBool(newValue, forKey: settingsPrintHelpKey) }
 	}
 }
 
 let settingXcodeArchivesKey = "archives"
+let settingsDryRunKey = "dryrun"
+let settingsPrintVerboseKey = "verbose"
 let settingsPrintHelpKey = "help"

@@ -30,14 +30,17 @@ class Symbolicator {
 				
 				// Symbolicate the crash log.
 				if let symbolized = symbolicator.symbolicate(optionalContents, archiveHandler: archiveHandler) {
+					if settings.dryRun {
+						continue
+					}
+					
 					do {
 						try symbolized.writeToFile(path, atomically: true, encoding: NSUTF8StringEncoding)
+						print("File overwritted with symbolized data")
 					} catch {
 						print("ERROR: failed saving symbolized contents: \(error)")
 					}
 				}
-				
-				print("File overwritted with symbolized data")
 			} catch {
 				print("ERROR: Failed reading contents of \((path as NSString).lastPathComponent): \(error)")
 				continue
