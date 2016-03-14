@@ -162,8 +162,12 @@ class FileSymbolicator {
 	}
 	
 	private func baseAddressForSymbolication(contents: String, identifier: String) -> String? {
-		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+"
+		// Ignore ??? type of identifiers.
+		if let _ = identifier.rangeOfCharacterFromSet(NSCharacterSet(charactersInString: "?")) {
+			return nil
+		}
 		
+		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+"
 		if let regex = pattern.toRxWithOptions(.AnchorsMatchLines), let match = regex.firstMatchWithDetails(contents) {
 			return (match.groups[1] as! RxMatchGroup).value
 		}
