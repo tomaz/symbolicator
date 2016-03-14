@@ -11,13 +11,14 @@ typealias CrashlogInformation = (name: String, identifier: String, version: Stri
 
 class FileSymbolicator {
 	
-	func symbolicate(contents: String, archiveHandler: ArchiveHandler) -> String? {
+	func symbolicate(path: String, contents: String, archiveHandler: ArchiveHandler) -> String? {
 		// Extract all information about the process that crashed. Exit if not possible.
 		guard let information = extractProcessInformation(contents) else {
 			return nil
 		}
 		
 		// Store parameters for later use.
+		self.path = path
 		self.archiveHandler = archiveHandler
 		
 		// Prepare array of all lines needed for symbolication.
@@ -29,7 +30,7 @@ class FileSymbolicator {
 	}
 	
 	private func linesToSymbolicate(contents: NSString) -> [RxMatch] {
-		let pattern = "^[0-9]+?\\s+?(.+?)\\s+?(0x[0-9a-fA-F]+?)\\s+?(.+?)$"
+		let pattern = "^[0-9]+?\\s+?([^?]+?)\\s+?(0x[0-9a-fA-F]+?)\\s+?(.+?)$"
 		let regex = pattern.toRxWithOptions(.AnchorsMatchLines)
 		
 		// Find all matches.
@@ -48,6 +49,7 @@ class FileSymbolicator {
 		// Symbolicate all matches. Each entry corresponds to the same match in given array.
 		let whitespace = NSCharacterSet.whitespaceAndNewlineCharacterSet()
 		var result = contents
+		numberOfSymbolizedAddresses = 0
 		for match in matches {
 			// Add delimiter above each symbolication when verbose mode is on.
 			if settings.printVerbose {
@@ -86,6 +88,20 @@ class FileSymbolicator {
 			let replacementString = "\(replacementPrefix)\(symbolizedAddress)"
 			result = result.stringByReplacingOccurrencesOfString(originalString, withString: replacementString)
 			print("> \(binary) \(address): \(symbolizedAddress)")
+			numberOfSymbolizedAddresses++
+		}
+		
+		if matches.count > 0 {
+			if settings.printVerbose {
+				print("")
+			}
+			
+			let filename = (path as NSString).lastPathComponent
+			if numberOfSymbolizedAddresses == matches.count {
+				print("All \(matches.count) \(filename) addresses symbolized")
+			} else {
+				print("\(numberOfSymbolizedAddresses) of \(matches.count) \(filename) addresses symbolized")
+			}
 		}
 		
 		return result
@@ -162,11 +178,6 @@ class FileSymbolicator {
 	}
 	
 	private func baseAddressForSymbolication(contents: String, identifier: String) -> String? {
-		// Ignore ??? type of identifiers.
-		if let _ = identifier.rangeOfCharacterFromSet(NSCharacterSet(charactersInString: "?")) {
-			return nil
-		}
-		
 		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+"
 		if let regex = pattern.toRxWithOptions(.AnchorsMatchLines), let match = regex.firstMatchWithDetails(contents) {
 			return (match.groups[1] as! RxMatchGroup).value
@@ -218,4 +229,6 @@ class FileSymbolicator {
 	}
 	
 	private var archiveHandler: ArchiveHandler!
+	private var path: String!
+	private var numberOfSymbolizedAddresses = 0
 }

@@ -26,11 +26,15 @@ class Symbolicator {
 			
 			// Load contents of the file into string and bail out if it doesn't work.
 			do {
-				let optionalContents = try String(contentsOfFile:path, encoding: NSUTF8StringEncoding)
+				let original = try String(contentsOfFile:path, encoding: NSUTF8StringEncoding)
 				
 				// Symbolicate the crash log.
-				if let symbolized = symbolicator.symbolicate(optionalContents, archiveHandler: archiveHandler) {
+				if let symbolized = symbolicator.symbolicate(filename, contents: original, archiveHandler: archiveHandler) {
 					if settings.dryRun {
+						continue
+					}
+					
+					if symbolized == original {
 						continue
 					}
 					
