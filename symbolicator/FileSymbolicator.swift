@@ -191,7 +191,7 @@ class FileSymbolicator {
 			return nil
 		}
 		
-		let optionalArchitectureMatch = "^Code Type:\\s+([^ ]+).*$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
+		let optionalArchitectureMatch = "^Code Type:\\s+([^ \\r\\n]+)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
 		if (optionalArchitectureMatch == nil) {
 			print("ERROR: Process architecture value is missing!")
 			return nil
