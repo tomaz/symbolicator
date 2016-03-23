@@ -308,6 +308,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = B6BA76753D3441E88F04772E /* Pods.xcconfig */;
 			buildSettings = {
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "symbolicator/symbolicator-Bridging-Header.h";
 			};
@@ -317,6 +318,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = B6BA76753D3441E88F04772E /* Pods.xcconfig */;
 			buildSettings = {
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "symbolicator/symbolicator-Bridging-Header.h";
 			};

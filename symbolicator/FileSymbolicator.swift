@@ -35,13 +35,26 @@ class FileSymbolicator {
 		
 		// Find all matches.
 		let matches = contents.matchesWithDetails(regex) as! [RxMatch]
+		let whitespace = NSCharacterSet.whitespaceCharacterSet()
 		
 		// Filter just the ones that have a hex number instead of symbol.
 		return matches.filter { match in
 			guard let symbolOrAddress = (match.groups[3] as! RxMatchGroup).value else {
 				return false
 			}
-			return symbolOrAddress.hasPrefix("0x")
+			
+			// Only contains hexadecimal address.
+			if symbolOrAddress.hasPrefix("0x") {
+				return true
+			}
+			
+			// Contains "binary + address" - for example "Startupizer2 + 608348"
+			let binary = (match.groups[1] as! RxMatchGroup).value.stringByTrimmingCharactersInSet(whitespace)
+			if symbolOrAddress.containsString(binary) && symbolOrAddress.containsString("+") {
+				return true
+			}
+			
+			return false
 		}
 	}
 	
@@ -88,7 +101,7 @@ class FileSymbolicator {
 			let replacementString = "\(replacementPrefix)\(symbolizedAddress)"
 			result = result.stringByReplacingOccurrencesOfString(originalString, withString: replacementString)
 			print("> \(binary) \(address): \(symbolizedAddress)")
-			numberOfSymbolizedAddresses++
+			numberOfSymbolizedAddresses += 1
 		}
 		
 		if matches.count > 0 {
@@ -178,9 +191,21 @@ class FileSymbolicator {
 	}
 	
 	private func baseAddressForSymbolication(contents: String, identifier: String) -> String? {
+		// First attempt to find the whole identifier.
 		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+"
 		if let regex = pattern.toRxWithOptions(.AnchorsMatchLines), let match = regex.firstMatchWithDetails(contents) {
 			return (match.groups[1] as! RxMatchGroup).value
+		}
+		
+		// If this fails, fall down to generic search for binaries that include the given identifier.
+		let falldownPattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?([^\\s]+)\\s+"
+		if let regex = falldownPattern.toRxWithOptions(.AnchorsMatchLines), let matches = regex.matchesWithDetails(contents) {
+			for match in matches as! [RxMatch] {
+				let binary = (match.groups[3] as! RxMatchGroup).value
+				if binary.containsString(identifier) {
+					return (match.groups[1] as! RxMatchGroup).value
+				}
+			}
 		}
 		
 		print("WARNING: Didn't find starting address for \(identifier)")
