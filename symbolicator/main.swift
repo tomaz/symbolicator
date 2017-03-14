@@ -14,7 +14,7 @@ let commandLineParser = GBCommandLineParser()
 
 func setup() {
 	commandLineParser.registerOptions(options)
-	commandLineParser.registerSettings(settings)
+	commandLineParser.register(settings)
 }
 
 func run() {

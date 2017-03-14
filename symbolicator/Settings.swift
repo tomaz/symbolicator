@@ -15,27 +15,27 @@ class Settings: GBSettings {
 		super.init(name: "FactoryDefaults", parent: defaults)
 	}
 	
-	private init(name: String) {
+	fileprivate init(name: String) {
 		super.init(name: name, parent: nil)
 	}
 	
 	var xcodeArchivesFolder: String {
-		get { return objectForKey(settingXcodeArchivesKey) as! String }
+		get { return object(forKey: settingXcodeArchivesKey) as! String }
 		set { setObject(newValue, forKey: settingXcodeArchivesKey) }
 	}
 	
 	var dryRun: Bool {
-		get { return boolForKey(settingsDryRunKey) }
+		get { return bool(forKey: settingsDryRunKey) }
 		set { setBool(newValue, forKey: settingsDryRunKey) }
 	}
 	
 	var printVerbose: Bool {
-		get { return boolForKey(settingsPrintVerboseKey) }
+		get { return bool(forKey: settingsPrintVerboseKey) }
 		set { setBool(newValue, forKey: settingsPrintVerboseKey) }
 	}
 	
 	var printHelp: Bool {
-		get { return boolForKey(settingsPrintHelpKey) }
+		get { return bool(forKey: settingsPrintHelpKey) }
 		set { setBool(newValue, forKey: settingsPrintHelpKey) }
 	}
 }

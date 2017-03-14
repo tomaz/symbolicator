@@ -11,7 +11,7 @@ typealias CrashlogInformation = (name: String, identifier: String, version: Stri
 
 class FileSymbolicator {
 	
-	func symbolicate(path: String, contents: String, archiveHandler: ArchiveHandler) -> String? {
+	func symbolicate(_ path: String, contents: String, archiveHandler: ArchiveHandler) -> String? {
 		// Extract all information about the process that crashed. Exit if not possible.
 		guard let information = extractProcessInformation(contents) else {
 			return nil
@@ -22,20 +22,20 @@ class FileSymbolicator {
 		self.archiveHandler = archiveHandler
 		
 		// Prepare array of all lines needed for symbolication.
-		let matches = linesToSymbolicate(contents)
+		let matches = linesToSymbolicate(contents as NSString)
 		print("Found \(matches.count) lines that need symbolication")
 		
 		// Symbolicate all matches.
 		return symbolicateString(contents, information: information, matches: matches)
 	}
 	
-	private func linesToSymbolicate(contents: NSString) -> [RxMatch] {
+	fileprivate func linesToSymbolicate(_ contents: NSString) -> [RxMatch] {
 		let pattern = "^[0-9]+?\\s+?([^?]+?)\\s+?(0x[0-9a-fA-F]+?)\\s+?(.+?)$"
-		let regex = pattern.toRxWithOptions(.AnchorsMatchLines)
+		let regex = pattern.toRx(options: .anchorsMatchLines)
 		
 		// Find all matches.
-		let matches = contents.matchesWithDetails(regex) as! [RxMatch]
-		let whitespace = NSCharacterSet.whitespaceCharacterSet()
+		let matches = contents.matches(withDetails: regex) as! [RxMatch]
+		let whitespace = CharacterSet.whitespaces
 		
 		// Filter just the ones that have a hex number instead of symbol.
 		return matches.filter { match in
@@ -49,8 +49,8 @@ class FileSymbolicator {
 			}
 			
 			// Contains "binary + address" - for example "Startupizer2 + 608348"
-			let binary = (match.groups[1] as! RxMatchGroup).value.stringByTrimmingCharactersInSet(whitespace)
-			if symbolOrAddress.containsString(binary) && symbolOrAddress.containsString("+") {
+			let binary = (match.groups[1] as! RxMatchGroup).value.trimmingCharacters(in: whitespace)
+			if symbolOrAddress.contains(binary) && symbolOrAddress.contains("+") {
 				return true
 			}
 			
@@ -58,9 +58,9 @@ class FileSymbolicator {
 		}
 	}
 	
-	private func symbolicateString(contents: String, information: CrashlogInformation, matches: [RxMatch]) -> String {
+	fileprivate func symbolicateString(_ contents: String, information: CrashlogInformation, matches: [RxMatch]) -> String {
 		// Symbolicate all matches. Each entry corresponds to the same match in given array.
-		let whitespace = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+		let whitespace = CharacterSet.whitespacesAndNewlines
 		var result = contents
 		numberOfSymbolizedAddresses = 0
 		for match in matches {
@@ -70,7 +70,7 @@ class FileSymbolicator {
 			}
 			
 			// Prepare binary and base address.
-			let binary = (match.groups[1] as! RxMatchGroup).value!.stringByTrimmingCharactersInSet(whitespace)
+			let binary = (match.groups[1] as! RxMatchGroup).value!.trimmingCharacters(in: whitespace)
 			guard let baseAddress = baseAddressForSymbolication(contents, identifier: binary) else {
 				continue
 			}
@@ -97,9 +97,9 @@ class FileSymbolicator {
 			
 			// Replace all occurrences within the file.
 			let locationInOriginalString = (match.groups[3] as! RxMatchGroup).range.location - match.range.location
-			let replacementPrefix = originalString.substringToIndex(originalString.startIndex.advancedBy(locationInOriginalString))
+			let replacementPrefix = originalString.substring(to: originalString.characters.index(originalString.startIndex, offsetBy: locationInOriginalString))
 			let replacementString = "\(replacementPrefix)\(symbolizedAddress)"
-			result = result.stringByReplacingOccurrencesOfString(originalString, withString: replacementString)
+			result = result.replacingOccurrences(of: originalString, with: replacementString)
 			print("> \(binary) \(address): \(symbolizedAddress)")
 			numberOfSymbolizedAddresses += 1
 		}
@@ -120,15 +120,15 @@ class FileSymbolicator {
 		return result
 	}
 	
-	private func baseAddresses(contents: String, matches: [RxMatch]) -> [String: (String, [RxMatch])] {
-		let ignoredChars = NSCharacterSet.whitespaceAndNewlineCharacterSet()
+	fileprivate func baseAddresses(_ contents: String, matches: [RxMatch]) -> [String: (String, [RxMatch])] {
+		let ignoredChars = CharacterSet.whitespacesAndNewlines
 		
 		var result = [String: (String, [RxMatch])]()
 		
 		// Prepare an array of base addresses per binary.
 		for match in matches {
 			// Prepare binary and address information.
-			let binary = (match.groups[1] as! RxMatchGroup).value.stringByTrimmingCharactersInSet(ignoredChars)
+			let binary = (match.groups[1] as! RxMatchGroup).value.trimmingCharacters(in: ignoredChars)
 			if binary.characters.count == 0 {
 				continue
 			}
@@ -153,11 +153,11 @@ class FileSymbolicator {
 		return result
 	}
 	
-	private func symbolicateAddresses(baseAddress: String, architecture: String, dwarfPath: String, addresses: [String]) -> [String] {
-		let arch = architecture.lowercaseString.stringByReplacingOccurrencesOfString("-", withString: "_")
-		let stdOutPipe = NSPipe()
-		let stdErrPipe = NSPipe()
-		let task = NSTask()
+	fileprivate func symbolicateAddresses(_ baseAddress: String, architecture: String, dwarfPath: String, addresses: [String]) -> [String] {
+		let arch = architecture.lowercased().replacingOccurrences(of: "-", with: "_")
+		let stdOutPipe = Pipe()
+		let stdErrPipe = Pipe()
+		let task = Process()
 		task.launchPath = "/usr/bin/xcrun"
 		task.arguments = ["atos", "-arch", arch, "-o", dwarfPath, "-l", baseAddress] + addresses
 		task.standardOutput = stdOutPipe
@@ -166,14 +166,14 @@ class FileSymbolicator {
 		task.waitUntilExit()
 		
 		let translatedData = stdOutPipe.fileHandleForReading.readDataToEndOfFile()
-		let translatedString = NSString(data: translatedData, encoding: NSASCIIStringEncoding)!
+		let translatedString = NSString(data: translatedData, encoding: String.Encoding.ascii.rawValue)!
 		
 		if settings.printVerbose {
 			// Print command line for simpler replication in
-			let whitespace = NSCharacterSet.whitespaceCharacterSet()
+			let whitespace = CharacterSet.whitespaces
 			let arguments = task.arguments! as [String]
 			let cmdline = arguments.reduce("") {
-				if let _ = $1.rangeOfCharacterFromSet(whitespace) {
+				if let _ = $1.rangeOfCharacter(from: whitespace) {
 					return "\($0) \"\($1)\""
 				}
 				return "\($0) \($1)"
@@ -183,26 +183,26 @@ class FileSymbolicator {
 		
 		// If there's some error, print it.
 		let errorData = stdErrPipe.fileHandleForReading.readDataToEndOfFile()
-		if let errorString = NSString(data: errorData, encoding: NSASCIIStringEncoding) where errorString.length > 0 {
+		if let errorString = NSString(data: errorData, encoding: String.Encoding.ascii.rawValue), errorString.length > 0 {
 			print("\(errorString)")
 		}
 		
-		return translatedString.componentsSeparatedByString("\n") as [String]
+		return translatedString.components(separatedBy: "\n") as [String]
 	}
 	
-	private func baseAddressForSymbolication(contents: String, identifier: String) -> String? {
+	fileprivate func baseAddressForSymbolication(_ contents: String, identifier: String) -> String? {
 		// First attempt to find the whole identifier.
 		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?\(identifier)\\s+"
-		if let regex = pattern.toRxWithOptions(.AnchorsMatchLines), let match = regex.firstMatchWithDetails(contents) {
+		if let regex = pattern.toRx(options: .anchorsMatchLines), let match = regex.firstMatch(withDetails: contents) {
 			return (match.groups[1] as! RxMatchGroup).value
 		}
 		
 		// If this fails, fall down to generic search for binaries that include the given identifier.
 		let falldownPattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?([^\\s]+)\\s+"
-		if let regex = falldownPattern.toRxWithOptions(.AnchorsMatchLines), let matches = regex.matchesWithDetails(contents) {
+		if let regex = falldownPattern.toRx(options: .anchorsMatchLines), let matches = regex.matches(withDetails: contents) {
 			for match in matches as! [RxMatch] {
 				let binary = (match.groups[3] as! RxMatchGroup).value
-				if binary.containsString(identifier) {
+				if (binary?.contains(identifier))! {
 					return (match.groups[1] as! RxMatchGroup).value
 				}
 			}
@@ -212,26 +212,26 @@ class FileSymbolicator {
 		return nil
 	}
 	
-	private func extractProcessInformation(contents: String) -> CrashlogInformation? {
-		let optionalProcessMatch = "^Process:\\s+([^\\[]+) \\[[^\\]]+\\]".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
+	fileprivate func extractProcessInformation(_ contents: String) -> CrashlogInformation? {
+		let optionalProcessMatch = "^Process:\\s+([^\\[]+) \\[[^\\]]+\\]".toRx(options: NSRegularExpression.Options.anchorsMatchLines)!.firstMatch(withDetails: contents)
 		if (optionalProcessMatch == nil) {
 			print("ERROR: Process name is missing!")
 			return nil
 		}
 		
-		let optionalIdentifierMatch = "^Identifier:\\s+(.+)$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
+		let optionalIdentifierMatch = "^Identifier:\\s+(.+)$".toRx(options: NSRegularExpression.Options.anchorsMatchLines)!.firstMatch(withDetails: contents)
 		if (optionalIdentifierMatch == nil) {
 			print("ERROR: Process identifier is missing!")
 			return nil
 		}
 		
-		let optionalVersionMatch = "^Version:\\s+([^ ]+) \\(([^)]+)\\)$".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents)
+		let optionalVersionMatch = "^Version:\\s+([^ ]+) \\(([^)]+)\\)$".toRx(options: NSRegularExpression.Options.anchorsMatchLines)!.firstMatch(withDetails: contents)
 		if (optionalVersionMatch == nil) {
 			print("ERROR: Process version and build number is missing!")
 			return nil
 		}
 		
-		let optionalArchitectureMatch = "^Code Type:\\s+([^ \\r\\n]+)".toRxWithOptions(NSRegularExpressionOptions.AnchorsMatchLines)!.firstMatchWithDetails(contents);
+		let optionalArchitectureMatch = "^Code Type:\\s+([^ \\r\\n]+)".toRx(options: NSRegularExpression.Options.anchorsMatchLines)!.firstMatch(withDetails: contents);
 		if (optionalArchitectureMatch == nil) {
 			print("ERROR: Process architecture value is missing!")
 			return nil
@@ -253,7 +253,7 @@ class FileSymbolicator {
 		return (name, identifier, version, build, architecture)
 	}
 	
-	private var archiveHandler: ArchiveHandler!
-	private var path: String!
-	private var numberOfSymbolizedAddresses = 0
+	fileprivate var archiveHandler: ArchiveHandler!
+	fileprivate var path: String!
+	fileprivate var numberOfSymbolizedAddresses = 0
 }

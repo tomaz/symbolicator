@@ -14,29 +14,29 @@ class ArchiveHandler {
 	}
 	
 	/// Returns map where keys are names of binaries with corresponding full path to DWARF file.
-	func dwarfPathWithIdentifier(identifier: String, version: String, build: String) -> String? {
+	func dwarfPathWithIdentifier(_ identifier: String, version: String, build: String) -> String? {
 		// If we don't have any dwarf files scanned, do so now.
 		if self.dwarfPathsByIdentifiers.count == 0 {
-			let manager = NSFileManager.defaultManager()
-			let fullBasePath = (self.basePath as NSString).stringByStandardizingPath
+			let manager = FileManager.default
+			let fullBasePath = (self.basePath as NSString).standardizingPath
 			manager.enumerateDirectoriesAtPath(fullBasePath) { dateFolder in
 				manager.enumerateDirectoriesAtPath(dateFolder) { buildFolder in
 					// If there's no plist file at the given path, ignore it.
-					let plistPath = (buildFolder as NSString).stringByAppendingPathComponent("Info.plist")
-					if !manager.fileExistsAtPath(plistPath) { return }
+					let plistPath = (buildFolder as NSString).appendingPathComponent("Info.plist")
+					if !manager.fileExists(atPath: plistPath) { return }
 					
 					// Load plist into dictionary.
-					let plistData = try! NSData(contentsOfFile: plistPath, options: .DataReadingUncached)
-					let plistContents: AnyObject = try! NSPropertyListSerialization.propertyListWithData(plistData, options: NSPropertyListReadOptions(rawValue: 0), format: nil)
+					let plistData = try! Data(contentsOf: URL(fileURLWithPath: plistPath), options: .uncached)
+					let plistContents = try! PropertyListSerialization.propertyList(from: plistData, options: PropertyListSerialization.ReadOptions(rawValue: 0), format: nil)
 					
 					// Read application properties.
-					let applicationInfo = self.applicationInformationWithInfoPlist(plistContents)
+					let applicationInfo = self.applicationInformationWithInfoPlist(plistContents as! NSDictionary)
 					
 					// Scan for all subfolders of dSYMs folder.
 					manager.enumerateDirectoriesAtPath("\(buildFolder)/dSYMs") { subpath in
 						// Delete .app.dSYM or .framework.dSYM and prepare path to contained DWARF file.
-						let binaryNameWithExtension = ((subpath as NSString).lastPathComponent as NSString).stringByDeletingPathExtension
-						let binaryName = (binaryNameWithExtension as NSString).stringByDeletingPathExtension
+						let binaryNameWithExtension = ((subpath as NSString).lastPathComponent as NSString).deletingPathExtension
+						let binaryName = (binaryNameWithExtension as NSString).deletingPathExtension
 						let dwarfPath = "\(subpath)/Contents/Resources/DWARF/\(binaryName)"
 						
 						// Add the key to DWARF file for this binary.
@@ -69,23 +69,23 @@ class ArchiveHandler {
 		return nil
 	}
 	
-	private func applicationInformationWithInfoPlist(plistContents: AnyObject) -> (name: String, identifier: String, version: String, build: String) {
+	fileprivate func applicationInformationWithInfoPlist(_ plistContents: NSDictionary) -> (name: String, identifier: String, version: String, build: String) {
 		var applicationName = ""
 		var applicationIdentifier = ""
 		var applicationVersion = ""
 		var applicationBuild = ""
 		
-		if let applicationProperties: AnyObject = plistContents.objectForKey("ApplicationProperties") {
-			if let path = applicationProperties.objectForKey("ApplicationPath") as? String {
+		if let applicationProperties = plistContents.object(forKey: "ApplicationProperties") as? NSDictionary {
+			if let path = applicationProperties.object(forKey: "ApplicationPath") as? String {
 				applicationName = (path as NSString).lastPathComponent
 			}
-			if let identifier = applicationProperties.objectForKey("CFBundleIdentifier") as? String {
+			if let identifier = applicationProperties.object(forKey: "CFBundleIdentifier") as? String {
 				applicationIdentifier = identifier
 			}
-			if let version = applicationProperties.objectForKey("CFBundleShortVersionString") as? String {
+			if let version = applicationProperties.object(forKey: "CFBundleShortVersionString") as? String {
 				applicationVersion = version
 			}
-			if let build = applicationProperties.objectForKey("CFBundleVersion") as? String {
+			if let build = applicationProperties.object(forKey: "CFBundleVersion") as? String {
 				applicationBuild = build
 			}
 		}
@@ -93,30 +93,30 @@ class ArchiveHandler {
 		return (applicationName, applicationIdentifier, applicationVersion, applicationBuild)
 	}
 	
-	private func dwarfKeyWithIdentifier(identifier: String, version: String, build: String) -> String {
+	fileprivate func dwarfKeyWithIdentifier(_ identifier: String, version: String, build: String) -> String {
 		if build.characters.count == 0 {
 			return "\(identifier) \(version) ANYBUILD"
 		}
 		return "\(identifier) \(version) \(build)"
 	}
 	
-	private let basePath: String
-	private var dwarfPathsByIdentifiers: Dictionary<String, String>
+	fileprivate let basePath: String
+	fileprivate var dwarfPathsByIdentifiers: Dictionary<String, String>
 }
 
-extension NSFileManager {
-	func enumerateDirectoriesAtPath(path: String, block: (path: String) -> Void) {
-		let subpaths = try! self.contentsOfDirectoryAtPath(path) as [String]
+extension FileManager {
+	func enumerateDirectoriesAtPath(_ path: String, block: (_ path: String) -> Void) {
+		let subpaths = try! self.contentsOfDirectory(atPath: path) as [String]
 		for subpath in subpaths {
-			let fullPath = (path as NSString).stringByAppendingPathComponent(subpath)
-			if !self.isDirectoryAtPath(fullPath) { continue }
-			block(path: fullPath)
+			let fullPath = (path as NSString).appendingPathComponent(subpath)
+			if !self.isDirectoryAtPath(fullPath as NSString) { continue }
+			block(fullPath)
 		}
 	}
 	
-	func isDirectoryAtPath(path: NSString) -> Bool {
-		let attributes = try! self.attributesOfItemAtPath(path as String)
-		if attributes[NSFileType] as? NSObject == NSFileTypeDirectory {
+	func isDirectoryAtPath(_ path: NSString) -> Bool {
+		let attributes = try! self.attributesOfItem(atPath: path as String)
+		if attributes[FileAttributeKey.type] as! FileAttributeType == FileAttributeType.typeDirectory {
 			return true
 		}
 		return false
