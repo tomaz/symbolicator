@@ -11,8 +11,8 @@ class Options: GBOptionsHelper {
 	override init() {
 		super.init()
 		
-		applicationVersion = { "1.0" }
-		applicationBuild = { "99" }
+		applicationVersion = { GAppVersion }
+		applicationBuild = { "\(GAppBuildNumber)" }
 		printHelpHeader = { "Usage: %APPNAME [OPTIONS] <crash log paths separated by space>\nExample: %APPNAME crashlog1.crash \"~/Downloads/some other crash.txt\"" }
 		
 		registerSeparator("OPTIONS")
