@@ -29,6 +29,11 @@ class Settings: GBSettings {
 		set { setBool(newValue, forKey: settingsDryRunKey) }
 	}
 	
+	var fuzzySearch: Bool {
+		get { return bool(forKey: settingsFuzzySearchKey) }
+		set { setBool(newValue, forKey: settingsFuzzySearchKey) }
+	}
+	
 	var printVerbose: Bool {
 		get { return bool(forKey: settingsPrintVerboseKey) }
 		set { setBool(newValue, forKey: settingsPrintVerboseKey) }
@@ -42,5 +47,6 @@ class Settings: GBSettings {
 
 let settingXcodeArchivesKey = "archives"
 let settingsDryRunKey = "dryrun"
+let settingsFuzzySearchKey = "fuzzy"
 let settingsPrintVerboseKey = "verbose"
 let settingsPrintHelpKey = "help"

@@ -18,6 +18,7 @@ class Options: GBOptionsHelper {
 		registerSeparator("OPTIONS")
 		registerOption(0, long: settingXcodeArchivesKey, description: "Xcode archives location", flags: GBOptionFlags())
 		registerOption(0, long: settingsDryRunKey, description: "Dry run, do not overwrite input", flags: .noValue)
+		registerOption(0, long: settingsFuzzySearchKey, description: "Use fuzzy search for base address lookup", flags: .noValue)
 		registerOption(0, long: settingsPrintVerboseKey, description: "Print verbose output", flags: .noValue)
 		registerOption(0, long: settingsPrintHelpKey, description: "Print this help and exit", flags: .noValue)
 	}

@@ -8,6 +8,7 @@ Copyright (c) 2014 Gentle Bytes. All rights reserved.
 import Foundation
 
 class Symbolicator {
+	
 	func symbolicate(_ files: Array<String>, archivesPath: String) {
 		print("Symbolizing \(files.count) crash logs...")
 		

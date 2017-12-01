@@ -197,15 +197,12 @@ class FileSymbolicator {
 			return (match.groups[1] as! RxMatchGroup).value
 		}
 		
-		// If this fails, fall down to generic search for binaries that include the given identifier.
-		let falldownPattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?([^\\s]+)\\s+"
-		if let regex = falldownPattern.toRx(options: .anchorsMatchLines), let matches = regex.matches(withDetails: contents) {
-			for match in matches as! [RxMatch] {
-				let binary = (match.groups[3] as! RxMatchGroup).value
-				if (binary?.contains(identifier))! {
-					return (match.groups[1] as! RxMatchGroup).value
-				}
-			}
+		// If this fails, fall down to generic search for binaries that include the given identifier. Note we have 2 variants: exact or fuzzy.
+		let result = settings.fuzzySearch ?
+			baseAddressFuzzyMatcher(contents, identifier: identifier) :
+			baseAddressMatcher(contents, identifier: identifier)
+		if let result = result {
+			return result
 		}
 		
 		print("WARNING: Didn't find starting address for \(identifier)")
@@ -251,6 +248,37 @@ class FileSymbolicator {
 		
 		print("Detected \(identifier) \(architecture) [\(name) \(version) (\(build))]")
 		return (name, identifier, version, build, architecture)
+	}
+	
+	fileprivate func baseAddressMatcher(_ contents: String, identifier: String) -> String? {
+		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?([^\\s]+)\\s+"
+		if let regex = pattern.toRx(options: .anchorsMatchLines), let matches = regex.matches(withDetails: contents) as? [RxMatch] {
+			for match in matches {
+				let binaryIdentifier = (match.groups[3] as! RxMatchGroup).value
+				if (binaryIdentifier?.contains(identifier))! {
+					return (match.groups[1] as! RxMatchGroup).value
+				}
+			}
+		}
+		return nil
+	}
+	
+	fileprivate func baseAddressFuzzyMatcher(_ contents: String, identifier: String) -> String? {
+		let pattern = "^\\s+(0x[0-9a-fA-F]+)\\s+-\\s+(0x[0-9a-fA-F]+)\\s+[+]?([^\\s]+)\\s+(.+)"
+		if let regex = pattern.toRx(options: .anchorsMatchLines), let matches = regex.matches(withDetails: contents) as? [RxMatch] {
+			for match in matches {
+				// First try to match unique identifier.
+				if let binaryIdentifier = (match.groups[3] as! RxMatchGroup).value, binaryIdentifier.contains(identifier) {
+					return (match.groups[1] as! RxMatchGroup).value
+				}
+				
+				// If this doesn't yield results, perhaps given identifier is not unique bundle identifier (com.gentlebytes.startupizer), but instead application name "Startupizer3". In this case search remaining string which includes full path to the binary.
+				if let applicationIdentifier = (match.groups[4] as! RxMatchGroup).value, applicationIdentifier.contains(identifier) {
+					return (match.groups[1] as! RxMatchGroup).value
+				}
+			}
+		}
+		return nil
 	}
 	
 	fileprivate var archiveHandler: ArchiveHandler!
